@@ -1,1 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Music Player</title>
 
+<style>
+    html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: Arial, sans-serif;
+}
+.player-box { max-width: 720px; /* PC에서 적당히 큼 */ width: 100%; margin: 1px auto; } 
+
+.player-ratio {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background: #000;
+}
+#player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+table { max-width: 720px; width: 100%; margin: 10px auto; 
+  margin: 10px auto;
+  border-collapse: collapse;
+}
+td {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+}
+tr.active td {
+  background: #eee;
+  border-left: 5px solid #0dda95;
+}
+
+/* 컨트롤 바 스타일 추가 */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 12px auto;
+  width: min(360px, 90vw);
+}
+.controls button {
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #bbb;
+  background: #fff;
+  border-radius: 6px;
+}
+.controls button:focus {
+  outline: 2px solid #0dda95;
+}
+</style>
+</head>
+
+<body>
+
+<div class="player-box">
+  <div class="player-ratio">
+    <div id="player"></div>
+  </div>
+</div>
+
+<!-- 재생목록 테이블 -->
+<table id="playlist"></table>
+
+<!-- 컨트롤 바: Prev, Play/Pause, Next -->
+<div class="controls" aria-label="재생 컨트롤">
+  <button id="btnPrev" title="이전 트랙">⏮ </button>
+  <button id="btnPlayPause" title="재생/일시정지">▶ 재생</button>
+  <button id="btnNext" title="다음 트랙"> ⏭</button>
+</div>
+
+<script>
+/* ▶️ URL에서 list 값 읽기 */
+function getPlaylistName() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('list') || 'old';
+}
+
+/* ▶️ 곡 목록 정의 */
+const playlists = {
+  old: [
+    { title: "🎵 난 정말 몰랐었네", id: "_Bi1x8uPBJs" },
+    { title: "🎵 돌아가는 삼각지", id: "-XKJVwg3XXg" }
+  ],
+  enka: [
+    { title: "🎵 린(リン) - 인생외길(人生一路)", id: "rfjffhNxdLQ" },
+    { title: "🎵 都はるみ　裏町ごころ", id: "vnHDs5DlAG0" },
+    { title: "🎵 린X아즈마 아키-사사메 유키(細雪)", id: "vgPvhr7ZWbw" },
+    { title: "🎵 「雪中花」伍代夏子", id: "B6WmSUodgRQ" }
+  ],
+  jazz: [
+    { title: "🎷 번지없는 주막", id: "Z9vzsUxvsEg" },
+    { title: "🎷 고향아줌마", id: "6wvUMP1ZS7U" }
+  ]
+};
+
+let playlist = [];
+let currentIndex = 0;
+
+/* ▶️ 목록 생성 및 안정 로드 */
+const listName = getPlaylistName();
+const currentList = (playlists[listName] && Array.isArray(playlists[listName]))
+  ? playlists[listName]
+  : playlists.old;
+
+const table = document.getElementById('playlist');
+playlist = currentList.map(s => s.id);
+
+if (playlist.length > 0) {
+  currentList.forEach((song, index) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${song.title}</td>`;
+    tr.addEventListener('click', () => playByIndex(index));
+    table.appendChild(tr);
+  });
+  setActiveRow(0);
+}
+
+/* ▶️ YouTube API */
+var player;
+
+function onYouTubeIframeAPIReady() {
+  if (!playlist || playlist.length === 0) return;
+
+  player = new YT.Player('player', {
+    videoId: playlist[0],
+    playerVars: { playsinline: 1, rel: 0 },
+    events: { onStateChange }
+  });
+  updatePlayPauseButton();
+  // 초기 상태 표시
+  setActiveRow(0);
+}
+
+/* 재생/일시정지 토글 */
+function togglePlayPause() {
+  if (!player) return;
+  const state = player.getPlayerState();
+  if (state === YT.PlayerState.PLAYING) {
+    player.pauseVideo();
+  } else {
+    // UNSTARTED/PAUSED/ENDED인 경우 재생 시도
+    player.playVideo();
+  }
+  // 상태 반영 지연 반영
+  setTimeout(updatePlayPauseButton, 100);
+}
+
+/* 이전/다음 트랙 제어 */
+function playPrev() {
+  if (!playlist.length) return;
+  currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+  playByIndex(currentIndex);
+}
+function playNext() {
+  if (!playlist.length) return;
+  currentIndex = (currentIndex + 1) % playlist.length;
+  playByIndex(currentIndex);
+}
+
+function playByIndex(index) {
+  if (!playlist[index] || !player) return;
+  currentIndex = index;
+  player.loadVideoById(playlist[currentIndex]);
+  setActiveRow(index);
+  updatePlayPauseButton();
+}
+
+/* 상태 변화 처리 */
+function onStateChange(e) {
+  // PLAYING/PAUSED/ENDED에 따라 버튼 라벨 업데이트
+  updatePlayPauseButton();
+
+  // 엔딩 시 다음 트랙으로 넘어가는 로직 유지
+  if (e.data === YT.PlayerState.ENDED) {
+    currentIndex = (currentIndex + 1) % playlist.length;
+    playByIndex(currentIndex);
+  }
+}
+
+function setActiveRow(index) {
+  document.querySelectorAll('#playlist tr').forEach((tr, i) => {
+    tr.classList.toggle('active', i === index);
+  });
+}
+
+/* Play/Pause 버튼 라벨 갱신 로직 */
+function updatePlayPauseButton() {
+  const btn = document.getElementById('btnPlayPause');
+  if (!btn) return;
+  if (!player) {
+    btn.textContent = '▶ 재생';
+    btn.setAttribute('disabled', 'true');
+    return;
+  }
+  const state = player.getPlayerState();
+  if (state === YT.PlayerState.PLAYING) {
+    btn.textContent = '⏸ 일시정지';
+  } else {
+    btn.textContent = '▶ 재생';
+  }
+  btn.removeAttribute('disabled');
+}
+
+/* 버튼 이벤트 연결 */
+document.getElementById('btnPrev').addEventListener('click', playPrev);
+document.getElementById('btnNext').addEventListener('click', playNext);
+document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
+
+</script>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+</body>
+</html>
