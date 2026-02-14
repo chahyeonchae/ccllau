@@ -3,17 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YouTube Music Player</title>
+<meta content='img.jpg' property='og:image'/>  
+<title>YouTube Music Project</title>
 
 <style>
-    html, body {
-  margin: 0;
-  padding: 0;
-}
-body {
+html, body {
+
   font-family: Arial, sans-serif;
+  background: #f8f9fb;
 }
-.player-box { max-width: 720px; /* PC에서 적당히 큼 */ width: 100%; margin: 1px auto; } 
+
+/* 상단 메뉴 */
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 0;
+  background: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+
+.nav a {
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #444;
+  background: #f1f1f1;
+  transition: 0.2s;
+}
+
+.nav a.active {
+  background: #4a7cff;
+  color: #fff;
+}
+
+/* 플레이어 */
+.player-box {
+  max-width: 720px;
+  width: 100%;
+  margin: 20px auto;
+}
 
 .player-ratio {
   position: relative;
@@ -21,35 +51,61 @@ body {
   padding-top: 56.25%;
   background: #000;
 }
+
 #player {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
 }
-table { max-width: 720px; width: 100%; margin: 10px auto; 
-  margin: 10px auto;
+
+/* 목록 */
+table {
+  max-width: 720px;
+  width: 100%;
+  margin: 10px auto 20px;
   border-collapse: collapse;
-}
-td {
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
-  cursor: pointer;
-}
-tr.active td {
-  background: #eee;
-  border-left: 5px solid #0dda95;
+  background: #fff;
 }
 
-/* 컨트롤 바 스타일 추가 */
+td {
+  position: relative;
+  padding: 8px 12px 8px 34px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  line-height: 1.3;
+  color: #333;
+  font-size: 14px;
+}
+
+tr:hover td {
+  background: #f5f5f5;
+}
+
+tr.active td {
+  background: #f4f8ff;
+  font-weight: bold;
+  border-left: 4px solid #4a7cff;
+}
+
+tr.active td::before {
+  content: "▶";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4a7cff;
+  font-size: 13px;
+}
+
+/* 컨트롤 */
 .controls {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin: 12px auto;
-  width: min(360px, 90vw);
+  margin-bottom: 40px;
 }
+
 .controls button {
   padding: 8px 14px;
   font-size: 14px;
@@ -58,13 +114,16 @@ tr.active td {
   background: #fff;
   border-radius: 6px;
 }
-.controls button:focus {
-  outline: 2px solid #0dda95;
-}
 </style>
 </head>
 
 <body>
+
+<div class="nav">
+  <a href="old" data-name="old">OLD</a>
+  <a href="enka" data-name="enka">ENKA</a>
+  <a href="jazz" data-name="jazz">JAZZ</a>
+</div>
 
 <div class="player-box">
   <div class="player-ratio">
@@ -72,34 +131,31 @@ tr.active td {
   </div>
 </div>
 
-<!-- 재생목록 테이블 -->
 <table id="playlist"></table>
 
-<!-- 컨트롤 바: Prev, Play/Pause, Next -->
-<div class="controls" aria-label="재생 컨트롤">
-  <button id="btnPrev" title="이전 트랙">⏮ </button>
-  <button id="btnPlayPause" title="재생/일시정지">▶ 재생</button>
-  <button id="btnNext" title="다음 트랙"> ⏭</button>
+<div class="controls">
+  <button id="btnPrev">⏮ 이전</button>
+  <button id="btnPlayPause">▶ 재생</button>
+  <button id="btnNext">⏭ 다음</button>
 </div>
 
 <script>
-/* ▶️ URL에서 list 값 읽기 */
-function getPlaylistName() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('list') || 'old';
+/* ⭐ 카테고리 자동 인식 (폴더형 대응) */
+function getCategory() {
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  return parts[parts.length - 1] || "old";
 }
 
-/* ▶️ 곡 목록 정의 */
 const playlists = {
   old: [
     { title: "🎵 난 정말 몰랐었네", id: "_Bi1x8uPBJs" },
     { title: "🎵 돌아가는 삼각지", id: "-XKJVwg3XXg" }
   ],
   enka: [
-    { title: "🎵 린(リン) - 인생외길(人生一路)", id: "rfjffhNxdLQ" },
-    { title: "🎵 都はるみ　裏町ごころ", id: "vnHDs5DlAG0" },
-    { title: "🎵 린X아즈마 아키-사사메 유키(細雪)", id: "vgPvhr7ZWbw" },
-    { title: "🎵 「雪中花」伍代夏子", id: "B6WmSUodgRQ" }
+    { title: "🎵 린 - 인생외길", id: "rfjffhNxdLQ" },
+    { title: "🎵 都はるみ 裏町ごころ", id: "vnHDs5DlAG0" },
+    { title: "🎵 린 X 아즈마 아키", id: "vgPvhr7ZWbw" },
+    { title: "🎵 雪中花 伍代夏子", id: "B6WmSUodgRQ" }
   ],
   jazz: [
     { title: "🎷 번지없는 주막", id: "Z9vzsUxvsEg" },
@@ -107,119 +163,87 @@ const playlists = {
   ]
 };
 
+const category = getCategory();
+const currentList = playlists[category] || playlists["old"];
+
+/* 메뉴 active 표시 */
+document.querySelectorAll(".nav a").forEach(a => {
+  if (a.dataset.name === category) {
+    a.classList.add("active");
+  }
+});
+
 let playlist = [];
 let currentIndex = 0;
+const table = document.getElementById("playlist");
 
-/* ▶️ 목록 생성 및 안정 로드 */
-const listName = getPlaylistName();
-const currentList = (playlists[listName] && Array.isArray(playlists[listName]))
-  ? playlists[listName]
-  : playlists.old;
+currentList.forEach((song, index) => {
+  playlist.push(song.id);
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${song.title}</td>`;
+  tr.onclick = () => playByIndex(index);
+  table.appendChild(tr);
+});
 
-const table = document.getElementById('playlist');
-playlist = currentList.map(s => s.id);
-
-if (playlist.length > 0) {
-  currentList.forEach((song, index) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${song.title}</td>`;
-    tr.addEventListener('click', () => playByIndex(index));
-    table.appendChild(tr);
-  });
-  setActiveRow(0);
-}
-
-/* ▶️ YouTube API */
 var player;
 
 function onYouTubeIframeAPIReady() {
-  if (!playlist || playlist.length === 0) return;
-
-  player = new YT.Player('player', {
+  player = new YT.Player("player", {
     videoId: playlist[0],
-    playerVars: { playsinline: 1, rel: 0 },
+    playerVars: { rel: 0, playsinline: 1 },
     events: { onStateChange }
   });
-  updatePlayPauseButton();
-  // 초기 상태 표시
   setActiveRow(0);
 }
 
-/* 재생/일시정지 토글 */
-function togglePlayPause() {
-  if (!player) return;
-  const state = player.getPlayerState();
-  if (state === YT.PlayerState.PLAYING) {
-    player.pauseVideo();
-  } else {
-    // UNSTARTED/PAUSED/ENDED인 경우 재생 시도
-    player.playVideo();
-  }
-  // 상태 반영 지연 반영
-  setTimeout(updatePlayPauseButton, 100);
+function playByIndex(index) {
+  currentIndex = index;
+  player.loadVideoById(playlist[currentIndex]);
+  setActiveRow(index);
 }
 
-/* 이전/다음 트랙 제어 */
 function playPrev() {
-  if (!playlist.length) return;
   currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
   playByIndex(currentIndex);
 }
+
 function playNext() {
-  if (!playlist.length) return;
   currentIndex = (currentIndex + 1) % playlist.length;
   playByIndex(currentIndex);
 }
 
-function playByIndex(index) {
-  if (!playlist[index] || !player) return;
-  currentIndex = index;
-  player.loadVideoById(playlist[currentIndex]);
-  setActiveRow(index);
+function togglePlayPause() {
+  const state = player.getPlayerState();
+  if (state === YT.PlayerState.PLAYING) {
+    player.pauseVideo();
+  } else {
+    player.playVideo();
+  }
+}
+
+function onStateChange(e) {
+  if (e.data === YT.PlayerState.ENDED) {
+    playNext();
+  }
   updatePlayPauseButton();
 }
 
-/* 상태 변화 처리 */
-function onStateChange(e) {
-  // PLAYING/PAUSED/ENDED에 따라 버튼 라벨 업데이트
-  updatePlayPauseButton();
-
-  // 엔딩 시 다음 트랙으로 넘어가는 로직 유지
-  if (e.data === YT.PlayerState.ENDED) {
-    currentIndex = (currentIndex + 1) % playlist.length;
-    playByIndex(currentIndex);
-  }
+function updatePlayPauseButton() {
+  const btn = document.getElementById("btnPlayPause");
+  if (!player) return;
+  const state = player.getPlayerState();
+  btn.textContent = state === YT.PlayerState.PLAYING ? "⏸ 일시정지" : "▶ 재생";
 }
 
 function setActiveRow(index) {
-  document.querySelectorAll('#playlist tr').forEach((tr, i) => {
-    tr.classList.toggle('active', i === index);
+  document.querySelectorAll("#playlist tr").forEach((tr, i) => {
+    tr.classList.toggle("active", i === index);
   });
 }
 
-/* Play/Pause 버튼 라벨 갱신 로직 */
-function updatePlayPauseButton() {
-  const btn = document.getElementById('btnPlayPause');
-  if (!btn) return;
-  if (!player) {
-    btn.textContent = '▶ 재생';
-    btn.setAttribute('disabled', 'true');
-    return;
-  }
-  const state = player.getPlayerState();
-  if (state === YT.PlayerState.PLAYING) {
-    btn.textContent = '⏸ 일시정지';
-  } else {
-    btn.textContent = '▶ 재생';
-  }
-  btn.removeAttribute('disabled');
-}
-
-/* 버튼 이벤트 연결 */
-document.getElementById('btnPrev').addEventListener('click', playPrev);
-document.getElementById('btnNext').addEventListener('click', playNext);
-document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
-
+document.getElementById("btnPrev").addEventListener("click", playPrev);
+document.getElementById("btnNext").addEventListener("click", playNext);
+document.getElementById("btnPlayPause").addEventListener("click", togglePlayPause);
 </script>
 
 <script src="https://www.youtube.com/iframe_api"></script>
